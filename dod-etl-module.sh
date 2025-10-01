@@ -7,10 +7,10 @@ GIT_REPO="https://github.com/dev-codflaw/dod-etl-module.git"
 
 echo "🚀 Starting DoD ETL setup in $CURRENT_DIR"
 
-# --- System update & basics ---
+# --- Full system update & basics ---
 echo "📦 Updating system..."
-sudo apt-get update -y
-sudo apt-get install -y python3 python3-venv python3-pip git
+sudo apt-get update -y && sudo apt-get upgrade -y
+sudo apt-get install -y python3 python3-venv python3-pip git nano
 
 # --- Create project dir (if not exist) ---
 if [ ! -d "dod-etl-module" ]; then
@@ -59,5 +59,9 @@ else
 fi
 
 echo "✅ Setup complete!"
-echo "➡️  To activate your environment, run:"
-echo "   cd $CURRENT_DIR/dod-etl-module && source env/bin/activate"
+
+# --- Final steps ---
+cd "$CURRENT_DIR/dod-etl-module"
+source env/bin/activate
+echo "✏️  Opening .env for editing..."
+nano .env
