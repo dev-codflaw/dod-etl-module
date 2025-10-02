@@ -10,7 +10,10 @@ from datetime import datetime, UTC
 from parsel import Selector
 from threading import Thread
 import random
+import time
 import urllib3
+from datetime import datetime, timezone
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from utils import c_replace, get_useragent, clean_url
@@ -100,12 +103,14 @@ print_log(f"Mongo: index ensured -> {create_index}")
 def save_html_file(html_content, html_file_path, unique_id):
     """Save HTML either locally or to DigitalOcean Spaces based on STORAGE_TYPE"""
     print_log(f"Save: ENTER save_html_file storage='{STORAGE_TYPE}' id='{unique_id}'")
+    url_out = None  # <-- new
     if STORAGE_TYPE == "local":
         try:
             os.makedirs(os.path.dirname(html_file_path), exist_ok=True)
             with open(html_file_path, "w", encoding="utf-8") as file:
                 file.write(html_content)
             print_log(f"Save: ✅ Saved locally -> {html_file_path}")
+            url_out = html_file_path   # <-- return local path
         except Exception as e:
             print_log(f"Save: ❌ Local save failed -> {e}")
 
@@ -118,7 +123,8 @@ def save_html_file(html_content, html_file_path, unique_id):
                 Body=html_content.encode("utf-8"),
                 ContentType="text/html"
             )
-            print(f"☁️ Saved to Spaces: {db_name}/{collection_name}/{unique_id}.html")
+            url_out = f"{SPACES_ENDPOINT}/{SPACES_BUCKET}/{key}"   # <-- return CDN URL
+            print(f"☁️ Saved to Spaces: {url_out}")
         except NoCredentialsError:
             print_log("Save: ❌ Spaces upload failed (No credentials)")
         except Exception as e:
@@ -127,6 +133,8 @@ def save_html_file(html_content, html_file_path, unique_id):
     else:
         print_log("Save: ⚠️ No valid storage method configured.")
     print_log(f"Save: EXIT save_html_file id='{unique_id}'")
+    return url_out   # <-- return URL/path
+
 
 def facebook_scraper(a,b):
     print_log(f"Scraper: ENTER facebook_scraper skip={a} limit={b}")
@@ -160,7 +168,10 @@ def facebook_scraper(a,b):
             'cookie': 'sb=lZ7XaNzny4EbZaVe2SIiPEKD; datr=lZ7XaOxRhPU8wKrY4Lh717Ru; c_user=100082945482980; presence=C%7B%22t3%22%3A%5B%5D%2C%22utc3%22%3A1758988798474%2C%22v%22%3A1%7D; fr=1eqoRbxO8CodcGUmC.AWcAzi2wvHo5JVHfsCytUdm3eJTPqQ1V6xFXhigCc4Yj2ydCDm4.Bo2AoA..AAA.0.0.Bo2AoA.AWeDPzzBdHeH6TU1eAoSlkfIDCc; xs=10%3AmAxieJ0ScZZ1LA%3A2%3A1758961362%3A-1%3A-1%3A%3AAcVxBvbwcVzeAOxu4VcaYnokpxRQ_f-Fo0de8Lp8sA; wd=1920x571',
         }
 
-        html_path = f'/home/veronica/Desktop/dod_etl_tool/Facebook_pages/output_{collection_name}/'
+        # html_path = f'/home/veronica/Desktop/dod_etl_tool/Facebook_pages/output_{collection_name}/'
+        html_base_path = os.getenv("HTML_BASE_PATH")
+        
+        html_path = os.path.join(html_base_path, f"output_{collection_name}/")
 
 
         if not os.path.exists(html_path):
@@ -181,8 +192,12 @@ def facebook_scraper(a,b):
         else:
             print_log(f"Proxy: dispatch -> {input_url}")
             try:
+                start_time = time.time()
                 response = get_proxy_response(input_url, headers1)
-                print_log(f"Proxy: response received status={response.status_code}")
+                duration = round(time.time() - start_time, 2)  # seconds
+                print_log(f"Proxy: response received status={response.status_code} in {duration}s")
+                # store duration in Mongo for tracking
+                collection.update_one({'url_id': idd},{'$set': {'last_fetch_time': duration, 'last_attempt': datetime.now(timezone.utc)}})
             except Exception as e:
                 print_log(f"Proxy: request FAILED -> {e}")
                 collection.update_one({'url_id': idd}, {'$set': {'status': 'proxy_failed'}})
@@ -199,25 +214,69 @@ def facebook_scraper(a,b):
                 print_log("Save: Page saved successfully")
 
             elif response.status_code == 200 and "When this happens, it\'s usually because the owner only shared it with\\n        a small group of people, changed who can see it or it\'s been deleted." in response.text:
-                collection.update_one({'url_id': idd}, {'$set': {'status': 'not_available'}})
+                # collection.update_one({'url_id': idd}, {'$set': {'status': 'not_available'}})
+                collection.update_one(
+                    {"url_id": idd},
+                    {
+                        "$set": {"status": "error"},
+                        "$push": {"error_log": {
+                            "time": datetime.now(timezone.utc),
+                            "error": "proxy_failed"
+                        }},
+                        "$inc": {"hit_count": 1}
+                    }
+                )                
                 print_log(f"Status: Not Available Page -> {input_url}")
                 print_log(f"Mongo: input status updated -> not_available (id='{idd}')")
                 print_log(f"Item: END (not_available) id='{idd}'")
                 continue
             elif response.status_code == 404 or "This page isn&#039;t available" in response.text:
-                collection.update_one({'url_id': idd}, {'$set': {'status': 'not_found'}})
+                # collection.update_one({'url_id': idd}, {'$set': {'status': 'not_found'}})
+                collection.update_one(
+                    {"url_id": idd},
+                    {
+                        "$set": {"status": "error"},
+                        "$push": {"error_log": {
+                            "time": datetime.now(timezone.utc),
+                            "error": "not_available"
+                        }},
+                        "$inc": {"hit_count": 1}
+                    }
+                )                
                 print_log("Status: Not Found Page")
                 print_log(f"Mongo: input status updated -> not_found (id='{idd}')")
                 print_log(f"Item: END (not_found) id='{idd}'")
                 continue
             elif response.status_code == 502 or response.status_code == 500:
-                collection.update_one({'url_id': idd}, {'$set': {'status': 'bad_gateway'}})
+                # collection.update_one({'url_id': idd}, {'$set': {'status': 'bad_gateway'}})
+                collection.update_one(
+                    {"url_id": idd},
+                    {
+                        "$set": {"status": "error"},
+                        "$push": {"error_log": {
+                            "time": datetime.now(timezone.utc),
+                            "error": "not_found"
+                        }},
+                        "$inc": {"hit_count": 1}
+                    }
+                )                
                 print_log("Status: Bad Gateway")
                 print_log(f"Mongo: input status updated -> bad_gateway (id='{idd}')")
                 print_log(f"Item: END (bad_gateway) id='{idd}'")
                 continue
             else:
-                collection.update_one({'url_id': idd}, {'$set': {'status': 'not_available'}})
+                # collection.update_one({'url_id': idd}, {'$set': {'status': 'not_available'}})
+                collection.update_one(
+                    {"url_id": idd},
+                    {
+                        "$set": {"status": "error"},
+                        "$push": {"error_log": {
+                            "time": datetime.now(timezone.utc),
+                            "error": "bad_gateway"
+                        }},
+                        "$inc": {"hit_count": 1}
+                    }
+                )
                 print_log(f"Status: Unable to retrieve page, code={response.status_code}")
                 print_log(f"Mongo: input status updated -> not_available (id='{idd}')")
                 print_log(f"Item: END (not_available) id='{idd}'")
@@ -1106,23 +1165,20 @@ def facebook_scraper(a,b):
 
 
 
-
 if __name__ == '__main__':
+
     run_count = 0
+    THREAD_COUNT = int(os.getenv("THREAD_COUNT"))  # Get thread count from env, default 10
     while collection.count_documents({'status': 'pending'}) != 0 and run_count < 10:
         total_count = collection.count_documents({'status': 'pending'})
-        variable_count = total_count // 10
-        if variable_count == 0:
-            variable_count = total_count ** 2
-        count = 1
+        variable_count = max(total_count // THREAD_COUNT, 1)
         threads = [Thread(target=facebook_scraper, args=(i, variable_count)) for i in
                    range(0, total_count, variable_count)]
+        print_log(f"Threading: Starting {len(threads)} threads for this batch (THREAD_COUNT={THREAD_COUNT})")
         for th in threads:
             th.start()
         for th in threads:
             th.join()
         run_count += 1
-
-
 
 

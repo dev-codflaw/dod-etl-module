@@ -14,6 +14,7 @@ import time
 from datetime import datetime, timezone
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import threading
 
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
@@ -164,6 +165,7 @@ def facebook_scraper(a,b):
         }
 
         html_base_path = os.getenv("HTML_BASE_PATH")
+        
         html_path = os.path.join(html_base_path, f"output_{collection_name}/")
 
         if not os.path.exists(html_path):
@@ -187,7 +189,6 @@ def facebook_scraper(a,b):
                 duration = round(time.time() - start_time, 2)  # seconds
                 print_log(f"Proxy: response received status={response.status_code} in {duration}s")
                 # store duration in Mongo for tracking
-                collection.update_one({'url_id': idd}, {'$set': {'last_fetch_time': duration}})
                 collection.update_one({'url_id': idd},{'$set': {'last_fetch_time': duration, 'last_attempt': datetime.now(timezone.utc)}})
             except Exception as e:
                 print_log(f"Proxy: request FAILED -> {e}")
@@ -283,8 +284,24 @@ def facebook_scraper(a,b):
                 print_log(f"Item: END (not_available) id='{idd}'")
                 continue
 
+def heartbeat():
+    """Logs a heartbeat every 2 minutes with pending count"""
+    while True:
+        try:
+            pending = collection.count_documents({'status': 'pending'})
+            print_log(f"💓 Heartbeat: script alive | Pending={pending}")
+        except Exception as e:
+            print_log(f"💓 Heartbeat: failed to fetch pending count -> {e}")
+        time.sleep(120)  # every 2 minutes
+
+
 
 if __name__ == '__main__':
+
+    # Start heartbeat thread
+    hb_thread = threading.Thread(target=heartbeat, daemon=True)
+    hb_thread.start()
+
     run_count = 0
     THREAD_COUNT = int(os.getenv("THREAD_COUNT"))  # Get thread count from env, default 10
     while collection.count_documents({'status': 'pending'}) != 0 and run_count < 10:
