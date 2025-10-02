@@ -30,7 +30,7 @@ from botocore.exceptions import NoCredentialsError
 # Simple print logger (timestamped)
 
 # ---------------------------------------
-from helper import print_log
+from utils import print_log
 
 
 # Storage type: choose "local" or "spaces"
@@ -165,7 +165,7 @@ def facebook_scraper(a,b):
         }
 
         html_base_path = os.getenv("HTML_BASE_PATH")
-        
+
         html_path = os.path.join(html_base_path, f"output_{collection_name}/")
 
         if not os.path.exists(html_path):

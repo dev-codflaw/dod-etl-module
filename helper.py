@@ -2,12 +2,15 @@ import os
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, UTC
+import boto3
+from botocore.exceptions import NoCredentialsError
 
 load_dotenv()  # Loads environment variables from a .env file
 
-# ---------------------------------------
-# Enhanced print logger (timestamped + icons + colors + separators)
-# ---------------------------------------
+from config import (STORAGE_TYPE, s3_client, SPACES_BUCKET, SPACES_ENDPOINT,
+                    db_name, collection_name, collection)
+
+# from utils import print_log
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -45,6 +48,42 @@ def print_log(msg):
         print(f"{GREEN}{'─'*60}{RESET}")
     elif "Item: END" in msg:
         print(f"{CYAN}{'═'*60}{RESET}")
+
+
+def save_html_file(html_content, html_file_path, unique_id):
+    """Save HTML either locally or to DigitalOcean Spaces based on STORAGE_TYPE"""
+    print_log(f"Save: ENTER save_html_file storage='{STORAGE_TYPE}' id='{unique_id}'")
+    url_out = None  # <-- new
+    if STORAGE_TYPE == "local":
+        try:
+            os.makedirs(os.path.dirname(html_file_path), exist_ok=True)
+            with open(html_file_path, "w", encoding="utf-8") as file:
+                file.write(html_content)
+            print_log(f"Save: ✅ Saved locally -> {html_file_path}")
+            url_out = html_file_path   # <-- return local path
+        except Exception as e:
+            print_log(f"Save: ❌ Local save failed -> {e}")
+
+    elif STORAGE_TYPE == "spaces" and s3_client:
+        try:
+            key = f"{db_name}/{collection_name}/{unique_id}.html"
+            s3_client.put_object(
+                Bucket=SPACES_BUCKET,
+                Key=key,
+                Body=html_content.encode("utf-8"),
+                ContentType="text/html"
+            )
+            url_out = f"{SPACES_ENDPOINT}/{SPACES_BUCKET}/{key}"   # <-- return CDN URL
+            print(f"☁️ Saved to Spaces: {url_out}")
+        except NoCredentialsError:
+            print_log("Save: ❌ Spaces upload failed (No credentials)")
+        except Exception as e:
+            print_log(f"Save: ❌ Spaces upload error -> {e}")
+
+    else:
+        print_log("Save: ⚠️ No valid storage method configured.")
+    print_log(f"Save: EXIT save_html_file id='{unique_id}'")
+    return url_out   # <-- return URL/path
 
 
 

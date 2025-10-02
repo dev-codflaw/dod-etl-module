@@ -7,7 +7,44 @@ from threading import Thread
 import random
 
 
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+CYAN = "\033[96m"
+RESET = "\033[0m"
 
+def print_log(msg):
+    """Print log with timestamp, color, icons, and separators for lifecycle events."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # auto-detect icon based on keywords
+    if "✅" in msg or "Saved" in msg or "connected" in msg:
+        icon = f"{GREEN}✅{RESET}"
+    elif "❌" in msg or "FAILED" in msg or "error" in msg.lower():
+        icon = f"{RED}❌{RESET}"
+    elif "⚠️" in msg or "warn" in msg.lower() or "missing" in msg.lower():
+        icon = f"{YELLOW}⚠️{RESET}"
+    elif "Save" in msg or "saved" in msg.lower():
+        icon = f"{CYAN}💾{RESET}"
+    elif "Mongo" in msg:
+        icon = "🔄"
+    elif "Thread" in msg:
+        icon = "🧵"
+    elif "Spaces" in msg or "Cloud" in msg:
+        icon = "☁️"
+    else:
+        icon = "ℹ️"
+
+    # main log line
+    print(f"{timestamp} | {icon} {msg}")
+
+    # separators for readability
+    if "Save: Page saved successfully" in msg:
+        print(f"{GREEN}{'─'*60}{RESET}")
+    elif "Item: END" in msg:
+        print(f"{CYAN}{'═'*60}{RESET}")
+
+        
 def c_replace(html=''):
     """
         This method for some more than replace method need to apply in
