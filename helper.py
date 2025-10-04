@@ -2,7 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, UTC
-import boto3
+import boto3,urllib
 from botocore.exceptions import NoCredentialsError
 
 load_dotenv()  # Loads environment variables from a .env file
@@ -99,5 +99,13 @@ def get_proxy_response(input_url, headers):
     response = requests.get(input_url, headers=headers, allow_redirects=True, proxies=proxies, verify=False)
     return response
 
-
+def get_proxy_api_response(input_url):
+    token = os.getenv('PROXY_TOKEN')
+    if not token:
+        raise ValueError("PROXY_TOKEN not found in environment variables.")
+    targetUrl = urllib.parse.quote(input_url)
+    geoCode = "us"
+    url = "http://api.scrape.do/?token={}&url={}&geoCode={}".format(token, targetUrl, geoCode)
+    response = requests.request("GET", url)
+    return response
 

@@ -21,7 +21,7 @@ from utils import c_replace, get_useragent, clean_url
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
-from helper import get_proxy_response
+from helper import get_proxy_response, get_proxy_api_response
 
 load_dotenv()
 
@@ -90,7 +90,7 @@ def facebook_scraper(a,b):
             print_log(f"Proxy: dispatch -> {input_url}")
             try:
                 start_time = time.time()
-                response = get_proxy_response(input_url, headers1)
+                response = get_proxy_api_response(input_url)
                 duration = round(time.time() - start_time, 2)  # seconds
                 print_log(f"Proxy: response received status={response.status_code} in {duration}s")
                 # store duration in Mongo for tracking
@@ -900,12 +900,26 @@ def facebook_scraper(a,b):
                                     data = entry[3][1]["__bbox"]["result"]["data"]
                                     if "page" in data:
                                         page_description = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                                            'description']
+                                            'description']['text']
                                         break
                                 except (KeyError, IndexError, TypeError):
                                     continue
                         except Exception:
                             page_description = ''
+                        if page_description == '':
+                            try:
+                                require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                                for entry in require_data:
+                                    try:
+                                        data = entry[3][1]["__bbox"]["result"]["data"]
+                                        if "page" in data:
+                                            page_description = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
+                                                'description']
+                                            break
+                                    except (KeyError, IndexError, TypeError):
+                                        continue
+                            except Exception:
+                                page_description = ''
 
                         if page_description:
                             page_description = c_replace(page_description)
