@@ -44,6 +44,29 @@ def print_log(msg):
     elif "Item: END" in msg:
         print(f"{CYAN}{'═'*60}{RESET}")
 
+headers1 = {
+    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'accept-language': 'en-US,en;q=0.9',
+    'cache-control': 'max-age=0',
+    'dpr': '1',
+    'priority': 'u=0, i',
+    'sec-ch-prefers-color-scheme': 'dark',
+    'sec-ch-ua': '"Chromium";v="140", "Not=A?Brand";v="24", "Google Chrome";v="140"',
+    'sec-ch-ua-full-version-list': '"Chromium";v="140.0.7339.208", "Not=A?Brand";v="24.0.0.0", "Google Chrome";v="140.0.7339.208"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-model': '""',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-ch-ua-platform-version': '"19.0.0"',
+    'sec-fetch-dest': 'document',
+    'sec-fetch-mode': 'navigate',
+    'sec-fetch-site': 'same-origin',
+    'sec-fetch-user': '?1',
+    'upgrade-insecure-requests': '1',
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+    'viewport-width': '1920',
+    'cookie': 'sb=lZ7XaNzny4EbZaVe2SIiPEKD; datr=lZ7XaOxRhPU8wKrY4Lh717Ru; c_user=100082945482980; presence=C%7B%22t3%22%3A%5B%5D%2C%22utc3%22%3A1758988798474%2C%22v%22%3A1%7D; fr=1eqoRbxO8CodcGUmC.AWcAzi2wvHo5JVHfsCytUdm3eJTPqQ1V6xFXhigCc4Yj2ydCDm4.Bo2AoA..AAA.0.0.Bo2AoA.AWeDPzzBdHeH6TU1eAoSlkfIDCc; xs=10%3AmAxieJ0ScZZ1LA%3A2%3A1758961362%3A-1%3A-1%3A%3AAcVxBvbwcVzeAOxu4VcaYnokpxRQ_f-Fo0de8Lp8sA; wd=1920x571',
+}
+
         
 def c_replace(html=''):
     """

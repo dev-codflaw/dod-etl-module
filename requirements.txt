@@ -3,3 +3,6 @@ boto3
 parsel
 json_repair
 pymongo
+dotenv
+
+
