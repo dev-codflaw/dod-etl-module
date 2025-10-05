@@ -77,9 +77,26 @@ except Exception as e:
     print_log(f"Mongo: connection FAILED ❌ -> {e}")
     raise
 
-db_name = os.getenv("MONGO_DB_NAME")
-collection_name = os.getenv("MONGO_COLLECTION_NAME")
+raw_db_name = os.getenv("MONGO_DB_NAME")
+raw_collection_name = os.getenv("MONGO_COLLECTION_NAME")
+db_name = raw_db_name.strip() if raw_db_name else None
+collection_name = raw_collection_name.strip() if raw_collection_name else None
+
+if not db_name or not collection_name:
+    missing_parts = []
+    if not db_name:
+        missing_parts.append("MONGO_DB_NAME")
+    if not collection_name:
+        missing_parts.append("MONGO_COLLECTION_NAME")
+    missing_list = " and ".join(missing_parts)
+    print_log(
+        f"Mongo: missing required environment variable(s) {missing_list}. "
+        "Please set them to continue."
+    )
+    raise SystemExit(1)
+
 print_log(f"Mongo: using db='{db_name}', input collection='{collection_name}', output collection='output_{collection_name}'")
+
 db = client[db_name]
 collection = db[collection_name]
 pdp_data = db['output_'+collection_name]
