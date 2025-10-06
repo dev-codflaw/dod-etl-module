@@ -556,13 +556,13 @@ def fb_process(html_response, idd, input_url, html_file_path):
             profile_url = ''
 
             try:
-                match = re.findall(r'"profile_url"\s*:\s*"([^"]+)"', html_response)
+                # match = re.findall(r'"profile_url"\s*:\s*"([^"]+)"', html_response)
+                # if match:
+                #     profile_url = match[0]
+                # else:
+                match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages\\/(?!category)[^"]+)"', html_response)
                 if match:
-                    profile_url = match[0]
-                else:
-                    match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages[^"]*)"', html_response)
-                    if match:
-                        profile_url = match[0].replace('\\/', '/')
+                    profile_url = match[0].replace('\\/', '/')
             except Exception:
                 profile_url = ''
 
@@ -778,33 +778,32 @@ def fb_process(html_response, idd, input_url, html_file_path):
                 else:
                     page_verification = 'Unofficial Page'
 
+                # page_url = ''
+
+                # try:
+                #     require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                #     for entry in require_data:
+                #         try:
+                #             data = entry[3][1]["__bbox"]["result"]["data"]
+                #             if "page" in data:
+                #                 page_url = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
+                #                     'current_open_status_info']['current_open_status']['ranges'][0]['entity'][
+                #                     'profile_url']
+                #                 break
+                #         except (KeyError, IndexError, TypeError):
+                #             continue
+                # except Exception:
+                #     page_url = ''
+                #
+                # if page_url == '':
                 page_url = ''
 
                 try:
-                    require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
-                    for entry in require_data:
-                        try:
-                            data = entry[3][1]["__bbox"]["result"]["data"]
-                            if "page" in data:
-                                page_url = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                                    'current_open_status_info']['current_open_status']['ranges'][0]['entity'][
-                                    'profile_url']
-                                break
-                        except (KeyError, IndexError, TypeError):
-                            continue
+                    match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages\\/(?!category)[^"]+)"', html_response)
+                    if match:
+                        page_url = match[0].replace('\\/', '/')
                 except Exception:
                     page_url = ''
-
-                if page_url == '':
-                    page_url = ''
-
-                    try:
-                        match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages[^"]*)"',
-                                            html_response)
-                        if match:
-                            page_url = match[0].replace('\\/', '/')
-                    except Exception:
-                        page_url = ''
                     #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.current_open_status_info.current_open_status.ranges[0].entity.profile_url
 
                 page_category = ''
