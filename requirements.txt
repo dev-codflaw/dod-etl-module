@@ -4,5 +4,5 @@ parsel
 json_repair
 pymongo
 dotenv
-
+pandas
 
