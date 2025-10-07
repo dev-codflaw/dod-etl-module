@@ -60,7 +60,6 @@ def fb_process(html_response, idd, input_url, html_file_path):
             profile_category = c_replace(profile_category)
             if profile_category.lower().startswith("page ·"):
                 profile_category = profile_category[6:].strip()
-        #require[0][3][0].__bbox.require[15][3][1].__bbox.result.data.profile_tile_sections.edges[0].node.profile_tile_views.nodes[1].view_style_renderer.view.profile_tile_items.nodes[0].node.timeline_context_item.renderer.context_item.title.text
 
         #todo address
         try:
@@ -167,7 +166,6 @@ def fb_process(html_response, idd, input_url, html_file_path):
             )
         except Exception as e:
             bio_text = None
-            print(f"Error extracting bio text: {e}")
 
         if bio_text:
             bio_text = c_replace(bio_text)
@@ -225,12 +223,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
 
                         if fb_followers_count:  # If we already found it, stop outer loop
                             break
-                        # fb_followers_count = context[0].get("text", {}).get("text", "")
-                        # if "followers" in fb_followers_count.lower():
-                        #     fb_followers_count = fb_followers_count.lower().replace(" followers", "").strip()
-                        # if fb_followers_count:
-                        #     fb_followers_count = fb_followers_count.replace(" followers", "")
-                        #     break
+
                 except (KeyError, IndexError, TypeError):
                     continue
         except Exception:
@@ -310,6 +303,12 @@ def fb_process(html_response, idd, input_url, html_file_path):
         except:
             last_post_creation = ''
 
+        if fb_profile_name == '':
+            try:
+                fb_profile_name = tree.xpath('//title//text()').get().split(' | ')[0]
+            except:
+                fb_profile_name = ''
+
         print_log("Mongo: inserting parsed data (branch=PROFILE)")
 
         records ={
@@ -347,7 +346,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
         if profile_data_2:
             profile_json_2 = json.loads(profile_data_2)
 
-            #todo full address
+            # todo full address
             full_address = ''
 
             try:
@@ -356,7 +355,8 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         data = entry[3][1]["__bbox"]["result"]["data"]
                         if "page" in data:
-                            full_address = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["address"]["full_address"]
+                            full_address = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["address"][
+                                "full_address"]
                             break
                     except (KeyError, IndexError, TypeError):
                         continue
@@ -366,7 +366,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
             if full_address:
                 full_address = c_replace(full_address.replace('\n', ''))
 
-            #todo category
+            # todo category
             category = ''
 
             try:
@@ -375,7 +375,9 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         data = entry[3][1]["__bbox"]["result"]["data"]
                         if "page" in data:
-                            category = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["page_categories"][0]["text"]
+                            category = \
+                            data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["page_categories"][0][
+                                "text"]
                             break
                     except (KeyError, IndexError, TypeError):
                         continue
@@ -384,8 +386,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
             if category:
                 category = c_replace(category.replace('page ·', ''))
 
-
-            #todo contact no
+            # todo contact no
             contact_no = ''
 
             try:
@@ -394,14 +395,15 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         data = entry[3][1]["__bbox"]["result"]["data"]
                         if "page" in data:
-                            contact_no = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["formatted_phone_number"]
+                            contact_no = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"][
+                                "formatted_phone_number"]
                             break
                     except (KeyError, IndexError, TypeError):
                         continue
             except Exception:
                 contact_no = ''
 
-            #todo website
+            # todo website
             website = ''
 
             try:
@@ -426,7 +428,8 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         data = entry[3][1]["__bbox"]["result"]["data"]
                         if "page" in data:
-                            fb_description = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["description"]['text']
+                            fb_description = \
+                            data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["description"]['text']
                             # require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[
                             #     0].page.page_about_fields.description.text
                             break
@@ -438,10 +441,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
             if fb_description:
                 fb_description = c_replace(fb_description.replace('\n', ''))
 
-
-
-
-            #todo followers count
+            # todo followers count
             followers_count = ''
 
             try:
@@ -457,7 +457,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
             except Exception:
                 followers_count = ''
 
-            #todo fb name
+            # todo fb name
 
             fb_name = ''
 
@@ -474,8 +474,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
             except Exception:
                 fb_name = ''
 
-
-            #todo fb emailaddress
+            # todo fb emailaddress
             fb_emailaddress = ''
 
             try:
@@ -484,7 +483,8 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         data = entry[3][1]["__bbox"]["result"]["data"]
                         if "page" in data:
-                            fb_emailaddress = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"][ "email_address"]
+                            fb_emailaddress = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"][
+                                "email_address"]
                             break
                     except (KeyError, IndexError, TypeError):
                         continue
@@ -494,7 +494,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
             if fb_emailaddress:
                 fb_emailaddress = clean_url(fb_emailaddress)
 
-            #todo verification
+            # todo verification
             verification = ''
             try:
                 require_data = profile_json_2["require"][0][3][0]["__bbox"]["require"]
@@ -502,7 +502,8 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         data = entry[3][1]["__bbox"]["result"]["data"]
                         if "page" in data:
-                            verification = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]['current_open_status_info']['current_open_status']['ranges'][0]['entity']['is_verified']
+                            verification = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"][
+                                'current_open_status_info']['current_open_status']['ranges'][0]['entity']['is_verified']
                             break
                     except (KeyError, IndexError, TypeError):
                         continue
@@ -515,8 +516,7 @@ def fb_process(html_response, idd, input_url, html_file_path):
                 except:
                     verification = ''
 
-
-            #todo post json
+            # todo post json
             try:
                 post_main = tree.xpath('//*[contains(text(),"creation_time")]/text()').get()
             except:
@@ -529,16 +529,24 @@ def fb_process(html_response, idd, input_url, html_file_path):
 
             try:
                 try:
-                    last_post_creation_time = post_json ['require'][0][3][0]['__bbox']['require'][83][3][1]['__bbox']['result']['data']['page']['stories_about_place']['edges'][0]['node']['comet_sections']['content']['story']['comet_sections']['attached_story']['story']['attached_story']['comet_sections']['attached_story_layout']['story']['comet_sections']['metadata'][0]['story']['creation_time']
+                    last_post_creation_time = \
+                    post_json['require'][0][3][0]['__bbox']['require'][83][3][1]['__bbox']['result']['data']['page'][
+                        'stories_about_place']['edges'][0]['node']['comet_sections']['content']['story'][
+                        'comet_sections']['attached_story']['story']['attached_story']['comet_sections'][
+                        'attached_story_layout']['story']['comet_sections']['metadata'][0]['story']['creation_time']
                 except:
-                    last_post_creation_time = post_json ['require'][0][3][0]['__bbox']['require'][96][3][1]['__bbox']['result']['data']['page']['stories_about_place']['edges'][0]['node']['comet_sections']['context_layout']['story']['comet_sections']['metadata'][0]['story']['creation_time'] #require[0][3][0].__bbox.require[96][3][1].__bbox.result.data.page.stories_about_place.edges[0].node.comet_sections.context_layout.story.comet_sections.metadata[0].story.creation_time
+                    last_post_creation_time = \
+                    post_json['require'][0][3][0]['__bbox']['require'][96][3][1]['__bbox']['result']['data']['page'][
+                        'stories_about_place']['edges'][0]['node']['comet_sections']['context_layout']['story'][
+                        'comet_sections']['metadata'][0]['story'][
+                        'creation_time']  # require[0][3][0].__bbox.require[96][3][1].__bbox.result.data.page.stories_about_place.edges[0].node.comet_sections.context_layout.story.comet_sections.metadata[0].story.creation_time
 
                 last_post_creation_time = int(last_post_creation_time)
                 last_post_creation_time = datetime.fromtimestamp(last_post_creation_time, UTC).strftime("%Y-%m-%d")
             except:
                 last_post_creation_time = ''
 
-            #todo - regex last_post_creation_time
+            # todo - regex last_post_creation_time
             try:
                 last_post_creation_time = re.match(r'"creation_time": (.*?),', html_response)
                 if last_post_creation_time:
@@ -547,32 +555,37 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     try:
                         last_post_creation_time = re.findall(r'"creation_time":(.*?),', html_response)[0]
                         last_post_creation_time = int(last_post_creation_time)
-                        last_post_creation_time = datetime.fromtimestamp(last_post_creation_time, UTC).strftime("%Y-%m-%d")
-                    except:last_post_creation_time =""
+                        last_post_creation_time = datetime.fromtimestamp(last_post_creation_time, UTC).strftime(
+                            "%Y-%m-%d")
+                    except:
+                        last_post_creation_time = ""
             except Exception as e:
                 print("Error in regex:", e)
-
 
             profile_url = ''
 
             try:
-                # match = re.findall(r'"profile_url"\s*:\s*"([^"]+)"', html_response)
-                # if match:
-                #     profile_url = match[0]
-                # else:
-                match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages\\/(?!category)[^"]+)"', html_response)
+                match = re.findall(r'"profile_url"\s*:\s*"([^"]+)"', html_response)
                 if match:
-                    profile_url = match[0].replace('\\/', '/')
+                    profile_url = match[0]
+                else:
+                    match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages\\/(?!category)[^"]+)"',
+                                       html_response)
+                    if match:
+                        profile_url = match[0].replace('\\/', '/')
             except Exception:
                 profile_url = ''
-
-
-
 
             if verification == True:
                 verification = 'Official Page'
             else:
                 verification = 'Unofficial Page'
+
+            if fb_name == '':
+                try:
+                    fb_name = tree.xpath('//title//text()').get().split(' | ')[0]
+                except:
+                    fb_name = ''
 
             records = {
                 'input_url': input_url,
@@ -607,27 +620,6 @@ def fb_process(html_response, idd, input_url, html_file_path):
             profile_data_3 = tree.xpath('//*[contains(text(),"follower_count")]//text()').get()
             if profile_data_3:
                 profile_data_3 = json.loads(profile_data_3)
-                # print(profile_data_3)
-
-                # page_name = profile_data_3['require'][0][3][0]['__bbox']['require'][83][3][1]['__bbox']['result']['data']['page']['name']
-                #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.name
-
-                page_name = ''
-
-                try:
-                    require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
-                    for entry in require_data:
-                        try:
-                            data = entry[3][1]["__bbox"]["result"]["data"]
-                            if "page" in data:
-                                page_name = data["page"]["comet_page_cards"][0]["page"]['name']
-                                break
-                        except (KeyError, IndexError, TypeError):
-                            continue
-                except Exception:
-                    page_name = ''
-
-                # print(page_name)
 
                 page_followers_count = ''
 
@@ -644,9 +636,26 @@ def fb_process(html_response, idd, input_url, html_file_path):
                 except Exception:
                     page_followers_count = ''
 
-                #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.follower_count
+                if page_followers_count == '':
+                    try:
+                        require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    for card in data["page"].get("comet_page_cards", []):
+                                        try:
+                                            page_followers_count = card["page"]["follower_count"]
+                                            break
+                                        except (KeyError, TypeError):
+                                            continue
+                                if page_followers_count:
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_followers_count = ''
 
-                print(page_name)
 
                 page_email_address = ''
 
@@ -656,13 +665,32 @@ def fb_process(html_response, idd, input_url, html_file_path):
                         try:
                             data = entry[3][1]["__bbox"]["result"]["data"]
                             if "page" in data:
-                                page_email_address = data["page"]["comet_page_cards"][0]["page"]['page_about_fields']['email']
+                                page_email_address = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
+                                    'email']
                                 break
                         except (KeyError, IndexError, TypeError):
                             continue
                 except Exception:
                     page_email_address = ''
-                    #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.email
+                if page_email_address == '':
+                    try:
+                        require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    for card in data["page"].get("comet_page_cards", []):
+                                        try:
+                                            page_email_address = card["page"]["page_about_fields"]['email']
+                                            break
+                                        except (KeyError, TypeError):
+                                            continue
+                                if page_email_address:
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_email_address = ''
 
                 page_fb_address = ''
 
@@ -672,16 +700,35 @@ def fb_process(html_response, idd, input_url, html_file_path):
                         try:
                             data = entry[3][1]["__bbox"]["result"]["data"]
                             if "page" in data:
-                                page_fb_address = data["page"]["comet_page_cards"][0]["page"]['page_about_fields']['address']
+                                page_fb_address = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
+                                    'address']
                                 break
                         except (KeyError, IndexError, TypeError):
                             continue
                 except Exception:
                     page_fb_address = ''
+                if page_fb_address == '':
+                    try:
+                        require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    for card in data["page"].get("comet_page_cards", []):
+                                        try:
+                                            page_fb_address = card["page"]["page_about_fields"]['address']
+                                            break
+                                        except (KeyError, TypeError):
+                                            continue
+                                if page_fb_address:
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_fb_address = ''
 
                 if page_fb_address:
                     page_fb_address = c_replace(page_fb_address)
-                #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.address
 
                 page_contact_no = ''
 
@@ -691,13 +738,35 @@ def fb_process(html_response, idd, input_url, html_file_path):
                         try:
                             data = entry[3][1]["__bbox"]["result"]["data"]
                             if "page" in data:
-                                page_contact_no = data["page"]["comet_page_cards"][0]["page"]['page_about_fields']['formatted_phone_number']
+                                page_contact_no = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
+                                    'formatted_phone_number']
                                 break
                         except (KeyError, IndexError, TypeError):
                             continue
                 except Exception:
                     page_contact_no = ''
-                    #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.formatted_phone_number
+
+                if page_contact_no == '':
+                    try:
+                        require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    for card in data["page"].get("comet_page_cards", []):
+                                        try:
+                                            page_contact_no = card["page"]["page_about_fields"][
+                                                'formatted_phone_number']
+                                            break
+                                        except (KeyError, TypeError):
+                                            continue
+                                if page_contact_no:
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_contact_no = ''
+                    # require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.formatted_phone_number
 
                 page_website = ''
 
@@ -707,16 +776,36 @@ def fb_process(html_response, idd, input_url, html_file_path):
                         try:
                             data = entry[3][1]["__bbox"]["result"]["data"]
                             if "page" in data:
-                                page_website = data["page"]["comet_page_cards"][0]["page"]['page_about_fields']['website']
+                                page_website = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
+                                    'website']
                                 break
                         except (KeyError, IndexError, TypeError):
                             continue
                 except Exception:
                     page_website = ''
-                    #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.website
+                if page_website == '':
+                    try:
+                        require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    for card in data["page"].get("comet_page_cards", []):
+                                        try:
+                                            page_website = card["page"]["page_about_fields"]['website']
+                                            break
+                                        except (KeyError, TypeError):
+                                            continue
+                                if page_website:
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_website = ''
+
+                    # require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.website
                 if page_website:
                     page_website = clean_url(page_website)
-
 
                 page_description = ''
 
@@ -726,8 +815,9 @@ def fb_process(html_response, idd, input_url, html_file_path):
                         try:
                             data = entry[3][1]["__bbox"]["result"]["data"]
                             if "page" in data:
-                                page_description = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                                    'description']['text']
+                                page_description = \
+                                    data["page"]["comet_page_cards"][0]["page"]['page_about_fields']['description'][
+                                        'text']
                                 break
                         except (KeyError, IndexError, TypeError):
                             continue
@@ -740,8 +830,13 @@ def fb_process(html_response, idd, input_url, html_file_path):
                             try:
                                 data = entry[3][1]["__bbox"]["result"]["data"]
                                 if "page" in data:
-                                    page_description = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                                        'description']
+                                    for card in data["page"].get("comet_page_cards", []):
+                                        try:
+                                            page_description = card["page"]["page_about_fields"]['description']
+                                            break
+                                        except (KeyError, TypeError):
+                                            continue
+                                if page_description:
                                     break
                             except (KeyError, IndexError, TypeError):
                                 continue
@@ -750,102 +845,8 @@ def fb_process(html_response, idd, input_url, html_file_path):
 
                 if page_description:
                     page_description = c_replace(page_description)
-                    #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.description
 
-                page_verification = ''
-
-                try:
-                    require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
-                    for entry in require_data:
-                        try:
-                            data = entry[3][1]["__bbox"]["result"]["data"]
-                            if "page" in data:
-                                page_verification = data["page"]["comet_page_cards"][0]["page"]['page_about_fields']['current_open_status_info']['current_open_status']['ranges'][0]['entity']['is_verified']
-                                break
-                        except (KeyError, IndexError, TypeError):
-                            continue
-                except Exception:
-                    page_verification = ''
-
-                if page_verification == '':
-                    try:
-                        page_verification = re.findall(r'"is_verified":(.*?),', html_response)[0]
-                    except:
-                        page_verification = ''
-                    #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.current_open_status_info.current_open_status.ranges[0].entity.is_verified
-                if page_verification == True:
-                    page_verification = 'Official Page'
-                else:
-                    page_verification = 'Unofficial Page'
-
-                # page_url = ''
-
-                # try:
-                #     require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
-                #     for entry in require_data:
-                #         try:
-                #             data = entry[3][1]["__bbox"]["result"]["data"]
-                #             if "page" in data:
-                #                 page_url = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                #                     'current_open_status_info']['current_open_status']['ranges'][0]['entity'][
-                #                     'profile_url']
-                #                 break
-                #         except (KeyError, IndexError, TypeError):
-                #             continue
-                # except Exception:
-                #     page_url = ''
-                #
-                # if page_url == '':
-                page_url = ''
-
-                try:
-                    match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages\\/(?!category)[^"]+)"', html_response)
-                    if match:
-                        page_url = match[0].replace('\\/', '/')
-                except Exception:
-                    page_url = ''
-                    #require[0][3][0].__bbox.require[7][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.current_open_status_info.current_open_status.ranges[0].entity.profile_url
-
-                page_category = ''
-
-                try:
-                    require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
-                    for entry in require_data:
-                        try:
-                            data = entry[3][1]["__bbox"]["result"]["data"]
-                            if "page" in data:
-                                page_category = data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                                    'current_open_status_info']['current_open_status']['ranges'][0]['entity'][
-                                    'category_type']
-                                break
-                        except (KeyError, IndexError, TypeError):
-                            continue
-                            #require[0][3][0].__bbox.require[5][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.page_categories[0].text
-                except Exception:
-                    page_category  = ''
-
-                if page_category == '':
-                    try:
-                        require_data = profile_data_3["require"][0][3][0]["__bbox"]["require"]
-                        for entry in require_data:
-                            try:
-                                data = entry[3][1]["__bbox"]["result"]["data"]
-                                if "page" in data:
-                                    page_category = \
-                                    data["page"]["comet_page_cards"][0]["page"]['page_about_fields'][
-                                        'page_categories'][0]['text']
-                                    break
-                            except (KeyError, IndexError, TypeError):
-                                continue
-                                # require[0][3][0].__bbox.require[5][3][1].__bbox.result.data.page.
-                                # comet_page_cards[0].page.page_about_fields.page_categories[0].text
-                    except Exception:
-                        page_category = ''
-
-                    if page_category:
-                        page_category = c_replace(page_category)
-
-                #todo profile data 3 post information
+                # todo profile data 3 post information
                 try:
                     post_main = tree.xpath('//*[contains(text(),"creation_time")]/text()').get()
                 except:
@@ -854,7 +855,6 @@ def fb_process(html_response, idd, input_url, html_file_path):
                     post_json = json_repair.loads(post_main)
                 except:
                     post_json = ''
-                    #require[0][3][0].__bbox.require[71][3][1].__bbox.result.data.page.stories_about_place.edges[0].node.comet_sections.context_layout.story.comet_sections.metadata[0].story.creation_time
                 profile_last_post_creation_time = ''
                 try:
                     profile_last_post_creation_time = re.match(r'"creation_time": (.*?),', html_response)
@@ -865,37 +865,115 @@ def fb_process(html_response, idd, input_url, html_file_path):
                             profile_last_post_creation_time = re.findall(r'"creation_time":(.*?),', html_response)[0]
                             profile_last_post_creation_time = int(profile_last_post_creation_time)
                             profile_last_post_creation_time = datetime.fromtimestamp(profile_last_post_creation_time,
-                                                                                UTC).strftime("%Y-%m-%d")
+                                                                                     UTC).strftime("%Y-%m-%d")
                         except:
                             profile_last_post_creation_time = ""
                 except Exception as e:
                     print("Error in regex:", e)
 
-                records = {
-                    'input_url': input_url,
-                    'time_stamp': datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
-                    'fb_last_post_date': profile_last_post_creation_time,
-                    'fb_url': page_url.replace("\\/", "/"),
-                    'fb_url_type': page_verification,
-                    'fb_number_of_followers': page_followers_count,
-                    'fb_company_name': page_name,
-                    'fb_company_intro': page_description,
-                    'fb_category': page_category,
-                    'fb_address': page_fb_address,
-                    'fb_phone_number': page_contact_no,
-                    'fb_email_address': page_email_address,
-                    'fb_website': page_website,
-                    'fb_website2': '',
-                    'fb_website3': '',
-                    'hash_id': idd,
-                    'pagesave': html_file_path
-                }
-                try:
-                    pdp_data.insert_one(records)  # `records` can be a dict (single doc) or list (multiple docs)
-                    print("Data inserted successfully")
-                except pymongo.errors.DuplicateKeyError:
-                    print("Data already exists (duplicate key error)")
-                except Exception as e:
-                    print("Data not inserted:", e)
 
-                collection.update_one({'url_id': idd}, {'$set': {'status': 'page_saved1'}})
+                # todo page url
+                page_data_4 = tree.xpath('//*[contains(text(),"verification_status")]//text()').get()
+                if page_data_4:
+                    page_data_4_json = json.loads(page_data_4)
+
+                    page_url = ''
+                    try:
+                        require_data = page_data_4_json["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    page_url = data["page"]['url']
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                                # require[0][3][0].__bbox.require[5][3][1].__bbox.result.data.page.comet_page_cards[0].page.page_about_fields.page_categories[0].text
+                    except Exception:
+                        page_url = ''
+
+                    # todo page name
+                    page_name = ''
+                    try:
+                        require_data = page_data_4_json["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    page_name = data["page"]["name"]
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                                # require[0][3][0].__bbox.require[3][3][1].__bbox.result.data.page.name
+                    except Exception:
+                        page_name = ''
+
+                    # todo page category
+                    page_category = ''
+                    try:
+                        require_data = page_data_4_json["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    page_category = data["page"]['category_name']
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_category = ''
+
+                    # todo page verification
+                    page_verification = ''
+                    try:
+                        require_data = page_data_4_json["require"][0][3][0]["__bbox"]["require"]
+                        for entry in require_data:
+                            try:
+                                data = entry[3][1]["__bbox"]["result"]["data"]
+                                if "page" in data:
+                                    page_verification = data["page"]['verification_status']
+                                    break
+                            except (KeyError, IndexError, TypeError):
+                                continue
+                    except Exception:
+                        page_verification = ''
+
+                    if page_verification == 'NOT_VERIFIED':
+                        page_verification = 'Unofficial Page'
+                    else:
+                        page_verification = 'Official Page'
+
+                    if page_name == '':
+                        try:
+                            page_name = tree.xpath('//title//text()').get().split(' | ')[0]
+                        except:
+                            page_name = ''
+                    records = {
+                        'input_url': input_url,
+                        'time_stamp': datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                        'fb_last_post_date': profile_last_post_creation_time,
+                        'fb_url': page_url.replace("\\/", "/"),
+                        'fb_url_type': page_verification,
+                        'fb_number_of_followers': page_followers_count,
+                        'fb_company_name': page_name,
+                        'fb_company_intro': page_description,
+                        'fb_category': page_category,
+                        'fb_address': page_fb_address,
+                        'fb_phone_number': page_contact_no,
+                        'fb_email_address': page_email_address,
+                        'fb_website': page_website,
+                        'fb_website2': '',
+                        'fb_website3': '',
+                        'hash_id': idd,
+                        'pagesave': html_file_path
+                    }
+                    try:
+                        pdp_data.insert_one(records)  # `records` can be a dict (single doc) or list (multiple docs)
+                        print("Data inserted successfully")
+                    except pymongo.errors.DuplicateKeyError:
+                        print("Data already exists (duplicate key error)")
+                    except Exception as e:
+                        print("Data not inserted:", e)
+
+                    collection.update_one({'url_id': idd}, {'$set': {'status': 'page_saved1'}})
+
