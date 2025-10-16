@@ -25,6 +25,12 @@ def facebook_scraper(a,b):
     for url in all_data:
         input_url = url[os.getenv("MONGO_URL_FIELD", "url")]
         idd = url[os.getenv("MONGO_URL_ID_FIELD", "url_id")]
+        country = "NA"
+        try:
+            country = url["country"]
+        except Exception as e:
+            print_log(f"Country not found in document, setting to 'Unknown'. Error: {e}")
+
         print_log(f"Item: START id='{idd}' url='{input_url}'")
 
         html_base_path = os.getenv("HTML_BASE_PATH")
@@ -68,7 +74,7 @@ def facebook_scraper(a,b):
 
         if html_response:
             print_log("Parse: start processing HTML")
-            fb_process(html_response, idd, input_url, html_file_path)
+            fb_process(html_response, idd, input_url, html_file_path, country=country)
         else:
             print_log("Parse: HTML response is None, skipping processing")
             continue
