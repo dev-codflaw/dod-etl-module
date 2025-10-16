@@ -340,7 +340,7 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
         except Exception as e:
             print_log(f"Mongo: ❌ Insert failed -> {e}")
 
-        collection.update_one({'url_id':idd}, {'$set': {'status': 'page_saved1'}})
+        collection.update_one({'url_id':idd}, {'$set': {'status': 'done'}})
         # continue
 
     else:
@@ -368,25 +368,6 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
             if full_address:
                 full_address = c_replace(full_address.replace('\n', ''))
 
-            # todo category
-            category = ''
-
-            try:
-                require_data = profile_json_2["require"][0][3][0]["__bbox"]["require"]
-                for entry in require_data:
-                    try:
-                        data = entry[3][1]["__bbox"]["result"]["data"]
-                        if "page" in data:
-                            category = \
-                            data["page"]["comet_page_cards"][0]["page"]["page_about_fields"]["page_categories"][0][
-                                "text"]
-                            break
-                    except (KeyError, IndexError, TypeError):
-                        continue
-            except Exception:
-                category = ''
-            if category:
-                category = c_replace(category.replace('page ·', ''))
 
             # todo contact no
             contact_no = ''
@@ -459,22 +440,6 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
             except Exception:
                 followers_count = ''
 
-            # todo fb name
-
-            fb_name = ''
-
-            try:
-                require_data = profile_json_2["require"][0][3][0]["__bbox"]["require"]
-                for entry in require_data:
-                    try:
-                        data = entry[3][1]["__bbox"]["result"]["data"]
-                        if "page" in data:
-                            fb_name = data["page"]["comet_page_cards"][0]["page"]["name"]
-                            break
-                    except (KeyError, IndexError, TypeError):
-                        continue
-            except Exception:
-                fb_name = ''
 
             # todo fb emailaddress
             fb_emailaddress = ''
@@ -496,27 +461,6 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
             if fb_emailaddress:
                 fb_emailaddress = clean_url(fb_emailaddress)
 
-            # todo verification
-            verification = ''
-            try:
-                require_data = profile_json_2["require"][0][3][0]["__bbox"]["require"]
-                for entry in require_data:
-                    try:
-                        data = entry[3][1]["__bbox"]["result"]["data"]
-                        if "page" in data:
-                            verification = data["page"]["comet_page_cards"][0]["page"]["page_about_fields"][
-                                'current_open_status_info']['current_open_status']['ranges'][0]['entity']['is_verified']
-                            break
-                    except (KeyError, IndexError, TypeError):
-                        continue
-            except Exception:
-                verification = ''
-
-            if verification == '':
-                try:
-                    verification = re.findall(r'"is_verified":(.*?),', html_response)[0]
-                except:
-                    verification = ''
 
             # todo post json
             try:
@@ -564,61 +508,126 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
             except Exception as e:
                 print("Error in regex:", e)
 
-            profile_url = ''
-
-            try:
-                match = re.findall(r'"profile_url"\s*:\s*"([^"]+)"', html_response)
-                if match:
-                    profile_url = match[0]
-                else:
-                    match = re.findall(r'"url"\s*:\s*"(https:\\/\\/www\.facebook\.com\\/pages\\/(?!category)[^"]+)"',
-                                       html_response)
-                    if match:
-                        profile_url = match[0].replace('\\/', '/')
-            except Exception:
-                profile_url = ''
-
-            if verification == True:
-                verification = 'Official Page'
-            else:
-                verification = 'Unofficial Page'
-
-            if fb_name == '':
+            # todo profile_url and category and verification
+            profile_data_2_profile = tree.xpath('//*[contains(text(),"uri_token")]//text()').get()
+            if profile_data_2_profile:
+                profile_data_2_profile = json.loads(profile_data_2_profile)
+                verification = ''
                 try:
-                    fb_name = tree.xpath('//title//text()').get().split(' | ')[0]
-                except:
+                    require_data = profile_data_2_profile.get("require", [])[0][3][0].get("__bbox", {}).get(
+                        "require", [])
+                    for entry in require_data:
+                        try:
+                            data = entry[3][1].get("__bbox", {}).get("result", {}).get("data", {})
+                            page_data = data.get("page", {})
+                            if "is_verified" in page_data:
+                                verification = page_data["is_verified"]
+                                break
+                        except (KeyError, IndexError, TypeError, AttributeError):
+                            continue
+
+                except (KeyError, IndexError, TypeError, AttributeError):
+                    verification = ''
+
+                if verification == False:
+                    verification = 'Unofficial Page'
+                else:
+                    verification = 'Official Page'
+
+                profile_url = ''
+                try:
+                    require_data = profile_data_2_profile.get("require", [])[0][3][0].get("__bbox", {}).get(
+                        "require",
+                        [])
+                    for entry in require_data:
+                        try:
+                            data = entry[3][1].get("__bbox", {}).get("result", {}).get("data", {})
+                            page_data = data.get("page", {})
+                            if "url" in page_data:
+                                profile_url = page_data["url"]
+                                break
+                        except (KeyError, IndexError, TypeError, AttributeError):
+                            continue
+
+                except (KeyError, IndexError, TypeError, AttributeError):
+                    profile_url = ''
+
+                category = ''
+                try:
+                    require_data = profile_data_2_profile.get("require", [])[0][3][0].get("__bbox", {}).get(
+                        "require",
+                        [])
+                    for entry in require_data:
+                        try:
+                            data = entry[3][1].get("__bbox", {}).get("result", {}).get("data", {})
+                            page_data = data.get("page", {})
+                            if "category_name" in page_data:
+                                category = page_data["category_name"]
+                                break
+                        except (KeyError, IndexError, TypeError, AttributeError):
+                            continue
+
+                except (KeyError, IndexError, TypeError, AttributeError):
+                    category = ''
+
+                if category:
+                    category = c_replace(category.replace('page ·', ''))
+
+                fb_name = ''
+                try:
+                    require_data = profile_data_2_profile.get("require", [])[0][3][0].get("__bbox", {}).get(
+                        "require",
+                        [])
+                    for entry in require_data:
+                        try:
+                            data = entry[3][1].get("__bbox", {}).get("result", {}).get("data", {})
+                            page_data = data.get("page", {})
+                            if "name" in page_data:
+                                fb_name = page_data["name"]
+                                break
+                        except (KeyError, IndexError, TypeError, AttributeError):
+                            continue
+
+                except (KeyError, IndexError, TypeError, AttributeError):
                     fb_name = ''
 
-            records = {
-                'input_url': input_url,
-                'time_stamp': datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
-                'fb_last_post_date': last_post_creation_time,
-                'fb_url': profile_url.replace("\\/", "/"),
-                'fb_url_type': verification,
-                'fb_number_of_followers': followers_count,
-                'fb_company_name': fb_name,
-                'fb_company_intro': fb_description,
-                'fb_category': category,
-                'fb_address': full_address,
-                'fb_phone_number': contact_no,
-                'fb_email_address': fb_emailaddress,
-                'fb_website': website,
-                'fb_website2': '',
-                'fb_website3': '',
-                'hash_id': idd,
-                'pagesave': html_file_path,
-                'country': country
 
-            }
-            try:
-                pdp_data.insert_one(records)  # `records` can be a dict (single doc) or list (multiple docs)
-                print("Data inserted successfully")
-            except pymongo.errors.DuplicateKeyError:
-                print("Data already exists (duplicate key error)")
-            except Exception as e:
-                print("Data not inserted:", e)
+                if fb_name == '':
+                    try:
+                        fb_name = tree.xpath('//title//text()').get().split(' | ')[0]
+                    except:
+                        fb_name = ''
 
-            collection.update_one({'url_id': idd}, {'$set': {'status': 'page_saved1'}})
+                records = {
+                    'input_url': input_url,
+                    'time_stamp': datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                    'fb_last_post_date': last_post_creation_time,
+                    'fb_url': profile_url.replace("\\/", "/"),
+                    'fb_url_type': verification,
+                    'fb_number_of_followers': followers_count,
+                    'fb_company_name': fb_name,
+                    'fb_company_intro': fb_description,
+                    'fb_category': category,
+                    'fb_address': full_address,
+                    'fb_phone_number': contact_no,
+                    'fb_email_address': fb_emailaddress,
+                    'fb_website': website,
+                    'fb_website2': '',
+                    'fb_website3': '',
+                    'hash_id': idd,
+                    'pagesave': html_file_path,
+                    'country': country
+
+                }
+                try:
+                    pdp_data.insert_one(records)  # `records` can be a dict (single doc) or list (multiple docs)
+                    print("Data inserted successfully")
+                except pymongo.errors.DuplicateKeyError:
+                    print("Data already exists (duplicate key error)")
+                except Exception as e:
+                    print("Data not inserted:", e)
+
+                collection.update_one({'url_id': idd}, {'$set': {'status': 'done'}})
 
         else:
             profile_data_3 = tree.xpath('//*[contains(text(),"follower_count")]//text()').get()
@@ -980,5 +989,5 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
                     except Exception as e:
                         print("Data not inserted:", e)
 
-                    collection.update_one({'url_id': idd}, {'$set': {'status': 'page_saved1'}})
+                    collection.update_one({'url_id': idd}, {'$set': {'status': 'done'}})
 
