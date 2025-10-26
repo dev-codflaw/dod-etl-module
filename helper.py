@@ -162,9 +162,9 @@ def get_proxy_api_response(input_url):
         'cookie': selected_cookie,
     }
 
-    sleep_time = random.uniform(5, 10)  # returns a float like 17.482
-    print(f"⏳ Sleeping for {sleep_time:.2f} seconds...")
-    time.sleep(sleep_time)
+    # sleep_time = random.uniform(5, 10)  # returns a float like 17.482
+    # print(f"⏳ Sleeping for {sleep_time:.2f} seconds...")
+    # time.sleep(sleep_time)
     response = requests.request("GET", url,headers=headers)
     # if response.status_code != 200:
     return response
