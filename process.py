@@ -9,7 +9,7 @@ from datetime import datetime, UTC
 from config import (STORAGE_TYPE, s3_client, SPACES_BUCKET, SPACES_ENDPOINT,
                     db_name, collection_name, collection, pdp_data)
 
-def fb_process(html_response, idd, input_url, html_file_path, country):
+def fb_process(html_response, idd, input_url, country):
     print_log("Parse: building selector tree")
     tree = Selector(text=html_response)
 
@@ -328,7 +328,6 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
             'fb_website2':profile_website2,
             'fb_website3':profile_website3,
             'hash_id':idd,
-            'pagesave':html_file_path,
             'country': country
 
         }
@@ -615,7 +614,6 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
                     'fb_website2': '',
                     'fb_website3': '',
                     'hash_id': idd,
-                    'pagesave': html_file_path,
                     'country': country
 
                 }
@@ -978,7 +976,6 @@ def fb_process(html_response, idd, input_url, html_file_path, country):
                         'fb_website2': '',
                         'fb_website3': '',
                         'hash_id': idd,
-                        'pagesave': html_file_path,
                         'country': country
                     }
                     try:

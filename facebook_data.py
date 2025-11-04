@@ -1,100 +1,95 @@
 import os
-from parsel import Selector
 from threading import Thread
-import urllib3
-import sys
-from datetime import datetime, timezone, UTC
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from utils import c_replace, get_useragent, clean_url
-from urllib.parse import quote_plus
+from datetime import datetime, timezone
+
 from dotenv import load_dotenv
-from helper import get_proxy_response, get_proxy_api_response
+from pymongo import ReturnDocument
+
 from save import fb_page_save
-load_dotenv()
 from utils import print_log
-from helper import save_html_file
-from config import (STORAGE_TYPE, s3_client, SPACES_BUCKET, SPACES_ENDPOINT,
-                    db_name, collection_name, collection, pdp_data)
+from config import collection
 from process import fb_process
 
-def facebook_scraper(a,b):
-    print_log(f"Scraper: ENTER facebook_scraper skip={a} limit={b}")
-    print_log("Scraper: fetching pending URLs from Mongo…")
-    all_data = collection.find({'status': "pending"}).skip(a).limit(b)
-    html_response = None
-    for url in all_data:
-        input_url = url[os.getenv("MONGO_URL_FIELD", "url")]
-        idd = url[os.getenv("MONGO_URL_ID_FIELD", "url_id")]
-        country = "NA"
-        try:
-            country = url["country"]
-        except Exception as e:
-            print_log(f"Country not found in document, setting to 'Unknown'. Error: {e}")
+load_dotenv()
 
-        print_log(f"Item: START id='{idd}' url='{input_url}'")
 
-        html_base_path = os.getenv("HTML_BASE_PATH")
+def _claim_next_pending():
+    """Atomically fetch the next pending document and mark it as in-progress."""
+    return collection.find_one_and_update(
+        {"status": "pending"},
+        {
+            "$set": {
+                "status": "in_progress",
+                "claimed_at": datetime.now(timezone.utc),
+            }
+        },
+        sort=[("_id", 1)],
+        return_document=ReturnDocument.AFTER,
+    )
 
-        if not html_base_path:
-            print_log(
-                "Configuration error: HTML_BASE_PATH is not set. "
-                "Set the environment variable to a writable directory, "
-                "for example by running 'export HTML_BASE_PATH=/path/to/storage'."
-            )
-            return
 
-        html_base_path = os.path.abspath(html_base_path)
+def facebook_scraper(thread_index):
+    print_log(f"Thread-{thread_index}: started")
 
-        if not os.path.exists(html_base_path):
-            try:
-                os.makedirs(html_base_path, exist_ok=True)
-            except OSError as exc:
-                print_log(
-                    "Configuration error: Unable to create the directory specified by "
-                    "HTML_BASE_PATH. Set it to a writable directory, for example by "
-                    "running 'export HTML_BASE_PATH=/path/to/storage'. "
-                    f"Original error: {exc}"
-                )
-                return
+    while True:
+        url_doc = _claim_next_pending()
+        if not url_doc:
+            print_log(f"Thread-{thread_index}: no more pending URLs, exiting")
+            break
 
-        if not os.path.isdir(html_base_path) or not os.access(html_base_path, os.W_OK):
-            print_log(
-                "Configuration error: HTML_BASE_PATH must point to a writable directory. "
-                "Set it to a writable location, for example by running "
-                "'export HTML_BASE_PATH=/path/to/storage'."
-            )
-            return
+        url_field = os.getenv("MONGO_URL_FIELD", "url")
+        id_field = os.getenv("MONGO_URL_ID_FIELD", "url_id")
+        input_url = url_doc.get(url_field)
+        idd = url_doc.get(id_field)
 
-        html_path = os.path.join(html_base_path, f"output_{collection_name}/")
-
-        unique_id = idd
-        html_file_path = f'{html_path}{unique_id}.html'
-
-        html_response = fb_page_save(html_path, idd, input_url, html_file_path)
-
-        if html_response:
-            print_log("Parse: start processing HTML")
-            fb_process(html_response, idd, input_url, html_file_path, country=country)
-        else:
-            print_log("Parse: HTML response is None, skipping processing")
+        if not input_url or not idd:
+            print_log(f"Thread-{thread_index}: missing URL or ID, skipping document {url_doc.get('_id')}")
             continue
 
+        country = url_doc.get("country", "NA")
+        if country == "NA":
+            print_log("Country not found in document, defaulting to 'NA'")
+
+        print_log(f"Item: START id='{idd}' url='{input_url}' (thread={thread_index})")
+
+        try:
+            html_response = fb_page_save(idd, input_url)
+            if html_response:
+                print_log("Parse: start processing HTML")
+                fb_process(html_response, idd, input_url, country=country)
+            else:
+                print_log("Parse: HTML response is None, skipping processing")
+        except Exception as exc:
+            print_log(f"Thread-{thread_index}: unexpected error -> {exc}")
+            collection.update_one(
+                {"url_id": idd},
+                {
+                    "$set": {"status": "error"},
+                    "$push": {
+                        "error_log": {
+                            "time": datetime.now(timezone.utc),
+                            "error": "thread_failure",
+                            "details": str(exc),
+                        }
+                    },
+                    "$inc": {"hit_count": 1},
+                },
+            )
+            print_log(f"Item: END (thread_failure) id='{idd}'")
 
 
 if __name__ == '__main__':
-    run_count = 0
-    THREAD_COUNT = int(os.getenv("THREAD_COUNT"))  # Get thread count from env, default 10
-    
-    while collection.count_documents({'status': 'pending'}) != 0 and run_count < 10:
-        total_count = collection.count_documents({'status': 'pending'})
-        variable_count = max(total_count // THREAD_COUNT, 1)
-        threads = [Thread(target=facebook_scraper, args=(i, variable_count)) for i in
-                   range(0, total_count, variable_count)]
-        print_log(f"Threading: Starting {len(threads)} threads for this batch (THREAD_COUNT={THREAD_COUNT})")
-        for th in threads:
-            th.start()
-        for th in threads:
-            th.join()
-        run_count += 1
+    thread_count = int(os.getenv("THREAD_COUNT", "10"))
+    pending_total = collection.count_documents({'status': 'pending'})
+    print_log(f"Main: pending URLs={pending_total}, THREAD_COUNT={thread_count}")
 
+    threads = [
+        Thread(target=facebook_scraper, args=(index,))
+        for index in range(thread_count)
+    ]
+
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
 

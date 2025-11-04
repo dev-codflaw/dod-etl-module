@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from datetime import datetime, UTC
 import boto3,urllib
 from botocore.exceptions import NoCredentialsError
-
+import io
+import lzma
 load_dotenv()  # Loads environment variables from a .env file
-
 from config import (STORAGE_TYPE, s3_client, SPACES_BUCKET, SPACES_ENDPOINT,
                     db_name, collection_name, collection)
 
@@ -49,29 +49,43 @@ def print_log(msg):
     elif "Item: END" in msg:
         print(f"{CYAN}{'═'*60}{RESET}")
 
+def compress_html_to_xz(html_content):
+    """
+    Compress HTML content using XZ (LZMA) in memory.
+    
+    Args:
+        html_content (str or bytes): The raw HTML data to compress.
+        
+    Returns:
+        io.BytesIO: A buffer containing the XZ-compressed data. This buffer is 
+        positioned at the beginning, ready to be passed to boto3 S3 upload methods 
+        (upload_fileobj or put_object).
+    """
+    # Ensure we have bytes (encode text to UTF-8 if needed)
+    if isinstance(html_content, str):
+        html_content = html_content.encode('utf-8')
+    
+    # Compress the data using XZ format with a reasonable preset (level 6 by default)
+    compressed_data = lzma.compress(html_content, format=lzma.FORMAT_XZ, preset=6)
+    
+    # Wrap compressed bytes in a BytesIO for file-like access (pointer at start)
+    return io.BytesIO(compressed_data)
 
-def save_html_file(html_content, html_file_path, unique_id):
-    """Save HTML either locally or to DigitalOcean Spaces based on STORAGE_TYPE"""
+def save_html_file(html_content, unique_id):
     print_log(f"Save: ENTER save_html_file storage='{STORAGE_TYPE}' id='{unique_id}'")
     url_out = None  # <-- new
-    if STORAGE_TYPE == "local":
-        try:
-            os.makedirs(os.path.dirname(html_file_path), exist_ok=True)
-            with open(html_file_path, "w", encoding="utf-8") as file:
-                file.write(html_content)
-            print_log(f"Save: ✅ Saved locally -> {html_file_path}")
-            url_out = html_file_path   # <-- return local path
-        except Exception as e:
-            print_log(f"Save: ❌ Local save failed -> {e}")
 
-    elif STORAGE_TYPE == "spaces" and s3_client:
+    if STORAGE_TYPE == "spaces" and s3_client:
         try:
-            key = f"{db_name}/{collection_name}/{unique_id}.html"
+            buffer = compress_html_to_xz(html_content)
+            key = f"{db_name}/{collection_name}_{unique_id}.html.xz"
             s3_client.put_object(
                 Bucket=SPACES_BUCKET,
                 Key=key,
-                Body=html_content.encode("utf-8"),
-                ContentType="text/html"
+                # Body=html_content.encode("utf-8"),
+                # ContentType="text/html"
+                Body=buffer.getvalue(),
+                ContentType="application/x-xz"
             )
             url_out = f"{SPACES_ENDPOINT}/{SPACES_BUCKET}/{key}"   # <-- return CDN URL
             print(f"☁️ Saved to Spaces: {url_out}")
@@ -79,7 +93,6 @@ def save_html_file(html_content, html_file_path, unique_id):
             print_log("Save: ❌ Spaces upload failed (No credentials)")
         except Exception as e:
             print_log(f"Save: ❌ Spaces upload error -> {e}")
-
     else:
         print_log("Save: ⚠️ No valid storage method configured.")
     print_log(f"Save: EXIT save_html_file id='{unique_id}'")
