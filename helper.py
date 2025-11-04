@@ -78,7 +78,7 @@ def save_html_file(html_content, unique_id):
     if STORAGE_TYPE == "spaces" and s3_client:
         try:
             buffer = compress_html_to_xz(html_content)
-            key = f"{db_name}/{collection_name}_{unique_id}.html.xz"
+            key = f"{db_name}/{collection_name}/{unique_id}.html.xz"
             s3_client.put_object(
                 Bucket=SPACES_BUCKET,
                 Key=key,
