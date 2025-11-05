@@ -1,8 +1,22 @@
 import time
+import os
+import atexit
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from utils import print_log
 from config import collection
 from helper import get_proxy_api_response, save_html_file
+
+
+UPLOAD_WORKERS = int(os.getenv("UPLOAD_WORKERS", "8"))
+_upload_executor = ThreadPoolExecutor(max_workers=UPLOAD_WORKERS)
+
+
+def _shutdown_executor():
+    _upload_executor.shutdown(wait=True)
+
+
+atexit.register(_shutdown_executor)
 
 
 def _mark_error(idd, error_key, message):
@@ -56,10 +70,10 @@ def fb_page_save(idd, input_url):
         for marker in ("profile_tile_section_type", "full_address", "follower_count")
     ):
         html_response = html_text
-        print_log("Save: start saving HTML (s3 spaces)")
-        save_html_file(html_response, idd)
-        print_log("Save: Page saved successfully")
-        return html_response
+        upload_dispatch_time = time.time()
+        future = _upload_executor.submit(save_html_file, html_response, idd)
+        print_log("Save: upload dispatched asynchronously")
+        return html_response, future, duration, upload_dispatch_time
 
     if response.status_code == 200 and (
         "When this happens, it's usually because the owner only shared it"
